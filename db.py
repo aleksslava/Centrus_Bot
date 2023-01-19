@@ -71,20 +71,28 @@ class DataBase:
 
     def get_file(self):
         get_file = """
-        SELECT form, collection, color, photo
+        SELECT factory, form, collection, color
         FROM vibropres
-        WHERE color = 'Базальт';"""
+        ;"""
         self.execute_query(get_file)
         result = self.cursor.fetchall()
-        return result[0][3]
+        return result
 
     def close_connection(self):
         self.cursor.close()
+
+    @staticmethod
+    def convert_to_output(lst):
+        output = []
+        pass
+
+
 
 if __name__ == "__main__":
     data = DataBase(Paths.path_to_database)
 
     data.create_connections()
+    print(data.get_file()[0])
 
 #data.create_table_vibropres()
 #data.add_to_table_vibropres(Paths.path_to_vibors)
