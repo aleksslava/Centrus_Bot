@@ -8,3 +8,4 @@ with open('TOKEN.txt', 'r') as file:
 class Paths:
     path_to_database = pathlib.Path('database').absolute().__str__() + r'\data_items.sqlite'
     path_to_vibors = r'D:\Python_code\Centrus_Bot\vibors_photo'
+    path_to_feldhaus_trot = r'D:\Python_code\Centrus_Bot\feldhaus_trot'

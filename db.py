@@ -2,6 +2,7 @@ import os
 import sqlite3
 from sqlite3 import Error
 from settings import Paths
+from telebot.types import InputMediaPhoto
 
 
 class DataBase:
@@ -41,6 +42,17 @@ class DataBase:
         """
         self.execute_query(vibropres_table)
 
+    def create_table_clinker_trot(self):
+        clinker_trot = """
+        CREATE TABLE IF NOT EXISTS clinker_trot (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        factory TEXT NOT NULL,
+        form TEXT NOT NULL,
+        color TEXT NOT NULL,
+        photo BLOB NOT NULL);
+        """
+        self.execute_query(clinker_trot)
+
     def convert_to_binary_data(self, file, path):
         """ Функция для конвертации файла в бинарный вид
         """
@@ -69,10 +81,38 @@ class DataBase:
                 print(f'При добавлении {file} произошла ошибка {e}')
                 continue
 
-    def get_file(self):
+    def add_to_clinker_trot(self, path):
+        list_of_items = os.listdir(path)
+        for file in list_of_items:
+
+            title, _ = file.split('.')
+            factory, form, color = title.split()
+            photo = self.convert_to_binary_data(file, path)
+            data_tuple = (factory, form, color, photo)
+            pattern_query = f"""
+                    INSERT INTO clinker_trot (factory, form, color, photo) 
+                    VALUES (?, ?, ?, ?);"""
+            try:
+                self.execute_query(pattern_query, data_tuple)
+
+                print(f'В базу данных успешно добавлен файл: "{file}"')
+            except Exception as e:
+                print(f'При добавлении {file} произошла ошибка {e}')
+                continue
+
+    def get_file_from_vibropres(self):
         get_file = """
-        SELECT factory, form, collection, color
+        SELECT factory, form, collection, color, photo
         FROM vibropres
+        ;"""
+        self.execute_query(get_file)
+        result = self.cursor.fetchall()
+        return result
+
+    def get_file_from_klinker_trot(self):
+        get_file = """
+        SELECT factory, form, color, photo
+        FROM clinker_trot
         ;"""
         self.execute_query(get_file)
         result = self.cursor.fetchall()
@@ -82,17 +122,65 @@ class DataBase:
         self.cursor.close()
 
     @staticmethod
-    def convert_to_output(lst):
-        output = []
-        pass
+    def convert_to_output_vibropres(num, lst):
 
+        len_lst = len(lst)
+        flag = True if len_lst % 5 == 0 else False
+        if flag:
+            max_count = len_lst // 5
+        else:
+            max_count = len_lst // 5 + 1
+        if num == 1:
+            start = 0
+            end = 6
+        elif 1 < num <= max_count:
+            start = (num - 1) * 5 + 1
+            end = num * 5 + 1
+        else:
+            start = (num - 1) * 5 + 1
+            end = len_lst
+
+        result = []
+        lst = lst[start:end]
+
+        for row in lst:
+            factory, form, collection, color, photo = row
+            result.append(InputMediaPhoto(media=photo, caption=f"""Завод: {factory}\nФорма: {form}\nЦвет: {color}"""))
+        return result, max_count
+
+    @staticmethod
+    def convert_to_output_feldhaus_trot(num, lst):
+        len_lst = len(lst)
+        flag = True if len_lst % 5 == 0 else False
+        if flag:
+            max_count = len_lst // 5
+        else:
+            max_count = len_lst // 5 + 1
+        if num == 1:
+            start = 0
+            end = 6
+        elif 1 < num <= max_count:
+            start = (num - 1) * 5 + 1
+            end = num * 5 + 1
+        else:
+            start = (num - 1) * 5 + 1
+            end = len_lst
+
+        result = []
+        lst = lst[start:end]
+
+        for row in lst:
+            factory, form, color, photo = row
+            result.append(InputMediaPhoto(media=photo, caption=f"""Завод: {factory}\nФорма: {form}\nЦвет: {color}"""))
+        return result, max_count
 
 
 if __name__ == "__main__":
     data = DataBase(Paths.path_to_database)
 
     data.create_connections()
-    print(data.get_file()[0])
+    data.create_table_clinker_trot()
+    data.add_to_clinker_trot(Paths.path_to_feldhaus_trot)
 
 #data.create_table_vibropres()
 #data.add_to_table_vibropres(Paths.path_to_vibors)
