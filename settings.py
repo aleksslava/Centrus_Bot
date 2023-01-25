@@ -14,3 +14,4 @@ class Paths:
     path_to_portland = r'D:\Python_code\Centrus_Bot\fasade2'
     path_to_kirpich = r'D:\Python_code\Centrus_Bot\kirpich'
     path_to_peldano = r'D:\Python_code\Centrus_Bot\peldano'
+    path_to_klinker = r'D:\Python_code\Centrus_Bot\klinker'

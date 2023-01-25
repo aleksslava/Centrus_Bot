@@ -65,6 +65,17 @@ class DataBase:
         """
         self.execute_query(table_fasade)
 
+    def create_table_klinker(self):
+        table_klinker = """
+        CREATE TABLE IF NOT EXISTS klinker (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        factory TEXT NOT NULL,
+        form TEXT NOT NULL,
+        color TEXT NOT NULL,
+        photo BLOB NOT NULL);
+        """
+        self.execute_query(table_klinker)
+
     def create_table_kirpich(self):
         table_kirpich = """
         CREATE TABLE IF NOT EXISTS kirpich (
@@ -152,6 +163,25 @@ class DataBase:
                 print(f'При добавлении {file} произошла ошибка {e}')
                 continue
 
+    def add_to_table_klinker(self, path):
+        list_of_items = os.listdir(path)
+        for file in list_of_items:
+
+            title, _ = file.split('.')
+            factory, form, color = title.split()
+            photo = self.convert_to_binary_data(file, path)
+            data_tuple = (factory, form, color, photo)
+            pattern_query = f"""
+                            INSERT INTO klinker (factory, form, color, photo) 
+                            VALUES (?, ?, ?, ?);"""
+            try:
+                self.execute_query(pattern_query, data_tuple)
+
+                print(f'В базу данных успешно добавлен файл: "{file}"')
+            except Exception as e:
+                print(f'При добавлении {file} произошла ошибка {e}')
+                continue
+
     def add_to_table_kirpich(self, path):
         list_of_items = os.listdir(path)
         for file in list_of_items:
@@ -222,6 +252,15 @@ class DataBase:
         SELECT factory, form, collection, color, photo
         FROM fasade
         WHERE form = 'исусственный_камень'
+        ;"""
+        self.execute_query(query)
+        result = self.cursor.fetchall()
+        return result
+
+    def get_file_from_fasade_klinker(self):
+        query = """
+        SELECT factory, form, color, photo
+        FROM klinker
         ;"""
         self.execute_query(query)
         result = self.cursor.fetchall()
@@ -353,7 +392,34 @@ class DataBase:
             factory, color, photo = row
             result.append(InputMediaPhoto(media=photo,
                                           caption=f"""Завод: {factory}\nЦвет: {color}"""))
-        return result, max_count
+        return result
+
+    @staticmethod
+    def convert_to_output_klinker(num, lst):
+        len_lst = len(lst)
+        flag = True if len_lst % 5 == 0 else False
+        if flag:
+            max_count = len_lst // 5
+        else:
+            max_count = len_lst // 5 + 1
+        if num == 1:
+            start = 0
+            end = 6
+        elif 1 < num <= max_count:
+            start = (num - 1) * 5 + 1
+            end = num * 5 + 1
+        else:
+            start = (num - 1) * 5 + 1
+            end = len_lst
+
+        result = []
+        lst = lst[start:end]
+
+        for row in lst:
+            factory, form, color, photo = row
+            result.append(InputMediaPhoto(media=photo,
+                                          caption=f"""Завод: {factory}\nФорма:{form}\nЦвет: {color}"""))
+        return result
 
 
     @staticmethod
@@ -381,7 +447,7 @@ class DataBase:
             factory, collection, color, photo = row
             result.append(InputMediaPhoto(media=photo,
                                           caption=f"""Завод: {factory}\nКоллекция: {collection}\nЦвет: {color}"""))
-        return result, max_count
+        return result
 
     def get_count_fasade(self, form):
         query = f"""
@@ -392,11 +458,37 @@ class DataBase:
         result = self.cursor.fetchall()
         return int(result[0][0])
 
+    def get_count_kirpich(self):
+        query = """
+        SELECT COUNT(id)
+        FROM kirpich
+        ;"""
+        self.execute_query(query)
+        result = self.cursor.fetchall()
+        return int(result[0][0])
+
+    def get_count_peldano(self):
+        query = """
+        SELECT COUNT(id)
+        FROM peldano
+        ;"""
+        self.execute_query(query)
+        result = self.cursor.fetchall()
+        return int(result[0][0])
+
+    def get_count_klinker(self):
+        query = """
+        SELECT COUNT(id)
+        FROM klinker
+        ;"""
+        self.execute_query(query)
+        result = self.cursor.fetchall()
+        return int(result[0][0])
+
 if __name__ == "__main__":
     data = DataBase(Paths.path_to_database)
     data.create_connections()
-    result = data.get_count_fasade('"искусственный_камень"')
-    print(result)
+
 
 
 
