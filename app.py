@@ -231,28 +231,16 @@ def callback_fklinker_paginator(m):
     max_count = (count_in_table // 5) if count_in_table % 5 == 0 else (count_in_table // 5 + 1)
     photo_lst = data.get_file_from_fasade_klinker()
     markup = InlineKeyboardMarkup()
-    if direction == 'next':
-        count = int(count) + 1
-        if count == max_count:
-            button_1 = InlineKeyboardButton(text=f'<---Назад', callback_data=f'back_fklinker_{count}')
-            button_2 = InlineKeyboardButton(text=f'{count} из {max_count}', callback_data='_')
-            markup.add(button_1, button_2)
-        else:
-            button_1 = InlineKeyboardButton(text=f'<---Назад', callback_data=f'back_fklinker_{count}')
-            button_2 = InlineKeyboardButton(text=f'{count} из {max_count}', callback_data='_')
-            button_3 = InlineKeyboardButton(text='Вперед--->', callback_data=f'next_fklinker_{count}')
-            markup.add(button_1, button_2, button_3)
+    count = int(count) + 1 if direction == "next" else int(count) - 1
+    button_back = InlineKeyboardButton(text=f'<---Назад', callback_data=f'back_fklinker_{count}')
+    button_middle = InlineKeyboardButton(text=f'{count} из {max_count}', callback_data='_')
+    button_next = InlineKeyboardButton(text='Вперед--->', callback_data=f'next_fklinker_{count}')
+    if count == 1:
+        markup.add(button_middle, button_next)
+    elif count == max_count:
+        markup.add(button_back, button_middle)
     else:
-        count = int(count) - 1
-        if count == 1:
-            button_1 = InlineKeyboardButton(text=f'{count} из {max_count}', callback_data='_')
-            button_2 = InlineKeyboardButton(text='Вперед--->', callback_data=f'next_fklinker_{count}')
-            markup.add(button_1, button_2)
-        else:
-            button_1 = InlineKeyboardButton(text=f'<---Назад', callback_data=f'back_fklinker_{count}')
-            button_2 = InlineKeyboardButton(text=f'{count} из {max_count}', callback_data='_')
-            button_3 = InlineKeyboardButton(text='Вперед--->', callback_data=f'next_fklinker_{count}')
-            markup.add(button_1, button_2, button_3)
+        markup.add(button_back, button_middle, button_next)
     photo_lst = data.convert_to_output_klinker(count, photo_lst)
     bot.send_media_group(m.message.chat.id, photo_lst)
     try:
