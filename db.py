@@ -312,7 +312,7 @@ class DataBase:
         for row in lst:
             factory, form, collection, color, photo = row
             result.append(InputMediaPhoto(media=photo, caption=f"""Завод: {factory}\nФорма: {form}\nКоллекция: {collection}\nЦвет: {color}"""))
-        return result, max_count
+        return result
 
     @staticmethod
     def convert_to_output_feldhaus_trot(num, lst):
@@ -334,11 +334,11 @@ class DataBase:
 
         result = []
         lst = lst[start:end]
-
         for row in lst:
             factory, form, color, photo = row
-            result.append(InputMediaPhoto(media=photo, caption=f"""Завод: {factory}\nФорма: {form}\nЦвет: {color}"""))
-        return result, max_count
+            result.append(InputMediaPhoto(media=photo,
+                                          caption=f"""Завод: {factory}\nФорма: {form}\nЦвет: {color}"""))
+        return result
 
     @staticmethod
     def convert_to_output_fasade(num, lst):
@@ -481,6 +481,24 @@ class DataBase:
         SELECT COUNT(id)
         FROM klinker
         ;"""
+        self.execute_query(query)
+        result = self.cursor.fetchall()
+        return int(result[0][0])
+
+    def get_count_vibropres(self):
+        query = """
+                SELECT COUNT(id)
+                FROM vibropres
+                ;"""
+        self.execute_query(query)
+        result = self.cursor.fetchall()
+        return int(result[0][0])
+    
+    def get_count_klinker_trot(self):
+        query = """
+                SELECT COUNT(id)
+                FROM clinker_trot
+                ;"""
         self.execute_query(query)
         result = self.cursor.fetchall()
         return int(result[0][0])
