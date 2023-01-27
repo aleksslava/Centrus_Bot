@@ -507,7 +507,19 @@ class DataBase:
 if __name__ == "__main__":
     data = DataBase(Paths.path_to_database)
     data.create_connections()
-
+    data.create_table_vibropres()
+    data.create_table_clinker_trot()
+    data.create_table_fasade()
+    data.create_table_klinker()
+    data.create_table_kirpich()
+    data.create_table_peldano()
+    data.add_to_table_fasade(Paths.path_to_kamelot)
+    data.add_to_table_fasade(Paths.path_to_portland)
+    data.add_to_table_vibropres(Paths.path_to_vibors)
+    data.add_to_clinker_trot(Paths.path_to_feldhaus_trot)
+    data.add_to_table_klinker(Paths.path_to_klinker)
+    data.add_to_table_kirpich(Paths.path_to_kirpich)
+    data.add_to_table_peldano(Paths.path_to_peldano)
 
 
 
