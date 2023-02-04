@@ -1,10 +1,8 @@
 from telebot import TeleBot
 from telebot.apihelper import ApiTelegramException
 from settings import token
-from telebot.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, ReplyKeyboardRemove
-from db import DataBase
-from settings import Paths
-import time
+from telebot.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
+from db1 import Data
 
 
 bot = TeleBot(token)
@@ -43,16 +41,22 @@ def callback_bruschatka(m):
     bot.delete_message(chat_id=m.message.chat.id, message_id=m.message.message_id)
     bot.send_message(m.message.chat.id, text="Выберите тип тротуарной плитки!", reply_markup=markup)
 
+@bot.callback_query_handler(lambda m: m.data == 'fasade')
+def callback_fasade1(m):
+    """Обработчик кнопки "Фасадная плитка", отправляет в чат inline меню"""
+    bot.delete_message(chat_id=m.message.chat.id, message_id=m.message.message_id)
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton(text='Искусственный камень', callback_data='next_fkamen_0'))
+    markup.add(InlineKeyboardButton(text='Декоративный кирпич', callback_data='next_fkirpich_0'))
+    markup.add(InlineKeyboardButton(text='Клинкерная плитка', callback_data='next_fklinker_0'))
+    bot.send_message(m.message.chat.id, text='Выберите категорию!', reply_markup=markup)
+
 
 @bot.callback_query_handler(func=lambda m: (m.data.split('_')[1] == 'beton') if len(m.data.split('_')) > 1 else False)
 def callback_beton_pagination(m):
     """Обработчик кнопки "Вибропрессованная плитка", отправляет в чат фото-коллаж и кнопки навигации"""
-    direction, _, count = m.data.split('_')
-    data = DataBase(Paths.path_to_database)
-    data.create_connections()
-    photo_lst = data.get_file_from_vibropres()
-    count_in_table = data.get_count_vibropres()
-    max_count = (count_in_table // 5) if count_in_table % 5 == 0 else (count_in_table // 5 + 1)
+    direction, table, count = m.data.split('_')
+    max_count = Data.get_max_count(Data.category_list[table])
     markup = InlineKeyboardMarkup()
     count = int(count) + 1 if direction == "next" else int(count) - 1
     button_back = InlineKeyboardButton(text=f'<---Назад', callback_data=f'back_beton_{count}')
@@ -64,8 +68,8 @@ def callback_beton_pagination(m):
         markup.add(button_back, button_middle)
     else:
         markup.add(button_back, button_middle, button_next)
-    photo_lst = data.convert_to_output_vibropres(count, photo_lst)
-    data.close_connection()
+    photo_lst = Data.get_list_photo(count, Data.category_list[table])
+    photo_lst = Data.convert_to_output(photo_lst)
     bot.send_media_group(m.message.chat.id, photo_lst)
     try:
         bot.delete_message(chat_id=m.message.chat.id, message_id=m.message.message_id)
@@ -78,12 +82,8 @@ def callback_beton_pagination(m):
 @bot.callback_query_handler(func=lambda m: (m.data.split('_')[1] == 'klinker1') if len(m.data.split('_')) > 1 else False)
 def callback_feldhaus_trot_pagination(m):
     """Обработчик кнопки "Клинкерная плитка", отправляет в чат фото-коллаж и кнопки навигации"""
-    direction, _, count = m.data.split('_')
-    data = DataBase(Paths.path_to_database)
-    data.create_connections()
-    photo_lst = data.get_file_from_klinker_trot()
-    count_in_table = data.get_count_klinker_trot()
-    max_count = (count_in_table // 5) if count_in_table % 5 == 0 else (count_in_table // 5 + 1)
+    direction, table, count = m.data.split('_')
+    max_count = Data.get_max_count(Data.category_list[table])
     markup = InlineKeyboardMarkup()
     count = int(count) + 1 if direction == "next" else int(count) - 1
     button_back = InlineKeyboardButton(text=f'<---Назад', callback_data=f'back_klinker1_{count}')
@@ -95,9 +95,9 @@ def callback_feldhaus_trot_pagination(m):
         markup.add(button_back, button_middle)
     else:
         markup.add(button_back, button_middle, button_next)
-    photo_lst = data.convert_to_output_feldhaus_trot(count, photo_lst)
+    photo_lst = Data.get_list_photo(count, Data.category_list[table])
+    photo_lst = Data.convert_to_output(photo_lst)
     bot.send_media_group(m.message.chat.id, photo_lst)
-    data.close_connection()
     try:
         bot.delete_message(chat_id=m.message.chat.id, message_id=m.message.message_id)
     except ApiTelegramException as e:
@@ -105,25 +105,13 @@ def callback_feldhaus_trot_pagination(m):
     bot.send_message(m.message.chat.id, text='Для просмотра названия формы и цвета нажмите на фото!',
                      reply_markup=markup)
 
-@bot.callback_query_handler(lambda m: m.data == 'fasade')
-def callback_fasade1(m):
-    """Обработчик кнопки "Фасадная плитка", отправляет в чат inline меню"""
-    bot.delete_message(chat_id=m.message.chat.id, message_id=m.message.message_id)
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton(text='Искусственный камень', callback_data='next_fkamen_0'))
-    markup.add(InlineKeyboardButton(text='Декоративный кирпич', callback_data='next_fkirpich_0'))
-    markup.add(InlineKeyboardButton(text='Клинкерная плитка', callback_data='next_fklinker_0'))
-    bot.send_message(m.message.chat.id, text='Выберите категорию!', reply_markup=markup)
 
 @bot.callback_query_handler(lambda m: (m.data.split('_')[1] == 'fkamen') if len(m.data.split('_')) > 1 else False)
 def callback_fasade_kamen_paginator(m):
     """Обработчик кнопки "Искусственный камень", отправляет в чат фото-коллаж и кнопки навигации"""
-    direction, _, count = m.data.split('_')
-    data = DataBase(Paths.path_to_database)
-    data.create_connections()
-    count_in_table = data.get_count_fasade('"искусственный_камень"')
-    max_count = (count_in_table // 5) if count_in_table % 5 == 0 else (count_in_table // 5 + 1)
-    photo_lst = data.get_file_from_fasade_kamen()
+
+    direction, table, count = m.data.split('_')
+    max_count = Data.get_max_count(Data.category_list[table])
     markup = InlineKeyboardMarkup()
     count = int(count) + 1 if direction == "next" else int(count) - 1
     button_back = InlineKeyboardButton(text=f'<---Назад', callback_data=f'back_fkamen_{count}')
@@ -135,9 +123,9 @@ def callback_fasade_kamen_paginator(m):
         markup.add(button_back, button_middle)
     else:
         markup.add(button_back, button_middle, button_next)
-    photo_lst = data.convert_to_output_fasade(count, photo_lst)
+    photo_lst = Data.get_list_photo(count, Data.category_list[table])
+    photo_lst = Data.convert_to_output(photo_lst)
     bot.send_media_group(m.message.chat.id, photo_lst)
-    data.close_connection()
     try:
         bot.delete_message(chat_id=m.message.chat.id, message_id=m.message.message_id)
     except ApiTelegramException as e:
@@ -148,12 +136,8 @@ def callback_fasade_kamen_paginator(m):
 @bot.callback_query_handler(lambda m: (m.data.split('_')[1] == 'fkirpich') if len(m.data.split('_')) > 1 else False)
 def callback_fasade_kirpich_paginator(m):
     """Обработчик кнопки "Декоративный кирпич", отправляет в чат фото-коллаж и кнопки навигации"""
-    direction, _, count = m.data.split('_')
-    data = DataBase(Paths.path_to_database)
-    data.create_connections()
-    count_in_table = data.get_count_fasade('"декоративный_кирпич"')
-    max_count = (count_in_table // 5) if count_in_table % 5 == 0 else (count_in_table // 5 + 1)
-    photo_lst = data.get_file_from_fasade_kirpich()
+    direction, table, count = m.data.split('_')
+    max_count = Data.get_max_count(Data.category_list[table])
     markup = InlineKeyboardMarkup()
     count = int(count) + 1 if direction == "next" else int(count) - 1
     button_back = InlineKeyboardButton(text=f'<---Назад', callback_data=f'back_fkirpich_{count}')
@@ -165,9 +149,9 @@ def callback_fasade_kirpich_paginator(m):
         markup.add(button_back, button_middle)
     else:
         markup.add(button_back, button_middle, button_next)
-    photo_lst = data.convert_to_output_fasade(count, photo_lst)
+    photo_lst = Data.get_list_photo(count, Data.category_list[table])
+    photo_lst = Data.convert_to_output(photo_lst)
     bot.send_media_group(m.message.chat.id, photo_lst)
-    data.close_connection()
     try:
         bot.delete_message(chat_id=m.message.chat.id, message_id=m.message.message_id)
     except ApiTelegramException as e:
@@ -179,12 +163,8 @@ def callback_fasade_kirpich_paginator(m):
 @bot.callback_query_handler(lambda m: (m.data.split('_')[1] == 'kirpich') if len(m.data.split('_')) > 1 else False)
 def callback_kirpich_paginator(m):
     """Обработчик кнопки "Облицовочный кирпич", отправляет в чат фото-коллаж и кнопки навигации"""
-    direction, _, count = m.data.split('_')
-    data = DataBase(Paths.path_to_database)
-    data.create_connections()
-    count_in_table = data.get_count_kirpich()
-    max_count = (count_in_table // 5) if count_in_table % 5 == 0 else (count_in_table // 5 + 1)
-    photo_lst = data.get_file_from_kirpich()
+    direction, table, count = m.data.split('_')
+    max_count = Data.get_max_count(Data.category_list[table])
     markup = InlineKeyboardMarkup()
     count = int(count) + 1 if direction == "next" else int(count) - 1
     button_back = InlineKeyboardButton(text=f'<---Назад', callback_data=f'back_kirpich_{count}')
@@ -196,9 +176,9 @@ def callback_kirpich_paginator(m):
         markup.add(button_back, button_middle)
     else:
         markup.add(button_back, button_middle, button_next)
-    photo_lst = data.convert_to_output_kirpich(count, photo_lst)
+    photo_lst = Data.get_list_photo(count, Data.category_list[table])
+    photo_lst = Data.convert_to_output(photo_lst)
     bot.send_media_group(m.message.chat.id, photo_lst)
-    data.close_connection()
     try:
         bot.delete_message(chat_id=m.message.chat.id, message_id=m.message.message_id)
     except ApiTelegramException as e:
@@ -210,12 +190,8 @@ def callback_kirpich_paginator(m):
 @bot.callback_query_handler(lambda m: (m.data.split('_')[1] == 'peldano') if len(m.data.split('_')) > 1 else False)
 def callback_peldano_paginator(m):
     """Обработчик кнопки "Клинкерные ступени", отправляет в чат фото-коллаж и кнопки навигации"""
-    direction, _, count = m.data.split('_')
-    data = DataBase(Paths.path_to_database)
-    data.create_connections()
-    count_in_table = data.get_count_peldano()
-    max_count = (count_in_table // 5) if count_in_table % 5 == 0 else (count_in_table // 5 + 1)
-    photo_lst = data.get_file_from_peldano()
+    direction, table, count = m.data.split('_')
+    max_count = Data.get_max_count(Data.category_list[table])
     markup = InlineKeyboardMarkup()
     count = int(count) + 1 if direction == "next" else int(count) - 1
     button_back = InlineKeyboardButton(text=f'<---Назад', callback_data=f'back_peldano_{count}')
@@ -227,9 +203,9 @@ def callback_peldano_paginator(m):
         markup.add(button_back, button_middle)
     else:
         markup.add(button_back, button_middle, button_next)
-    photo_lst = data.convert_to_output_peldano(count, photo_lst)
+    photo_lst = Data.get_list_photo(count, Data.category_list[table])
+    photo_lst = Data.convert_to_output(photo_lst)
     bot.send_media_group(m.message.chat.id, photo_lst)
-    data.close_connection()
     try:
         bot.delete_message(chat_id=m.message.chat.id, message_id=m.message.message_id)
     except ApiTelegramException as e:
@@ -240,12 +216,8 @@ def callback_peldano_paginator(m):
 @bot.callback_query_handler(lambda m: (m.data.split('_')[1] == 'fklinker') if len(m.data.split('_')) > 1 else False)
 def callback_fklinker_paginator(m):
     """Обработчик кнопки "Клинкерная плитка", отправляет в чат фото-коллаж и кнопки навигации"""
-    direction, _, count = m.data.split('_')
-    data = DataBase(Paths.path_to_database)
-    data.create_connections()
-    count_in_table = data.get_count_klinker()
-    max_count = (count_in_table // 5) if count_in_table % 5 == 0 else (count_in_table // 5 + 1)
-    photo_lst = data.get_file_from_fasade_klinker()
+    direction, table, count = m.data.split('_')
+    max_count = Data.get_max_count(Data.category_list[table])
     markup = InlineKeyboardMarkup()
     count = int(count) + 1 if direction == "next" else int(count) - 1
     button_back = InlineKeyboardButton(text=f'<---Назад', callback_data=f'back_fklinker_{count}')
@@ -257,9 +229,9 @@ def callback_fklinker_paginator(m):
         markup.add(button_back, button_middle)
     else:
         markup.add(button_back, button_middle, button_next)
-    photo_lst = data.convert_to_output_klinker(count, photo_lst)
+    photo_lst = Data.get_list_photo(count, Data.category_list[table])
+    photo_lst = Data.convert_to_output(photo_lst)
     bot.send_media_group(m.message.chat.id, photo_lst)
-    data.close_connection()
     try:
         bot.delete_message(chat_id=m.message.chat.id, message_id=m.message.message_id)
     except ApiTelegramException as e:
