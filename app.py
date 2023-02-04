@@ -1,20 +1,38 @@
 from telebot import TeleBot
 from telebot.apihelper import ApiTelegramException
 from settings import token
-from telebot.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton, KeyboardButton, ReplyKeyboardRemove
 from db1 import Data
+from models import User
 
 
 bot = TeleBot(token)
 
 @bot.message_handler(commands=['start',])
 def start(m):
+
     """Обработчик команды 'start', отправляет в чат reply кнопку 'Каталог'"""
-    user = m.from_user.first_name
-    hello = f'{user}, добро пожаловать в чат-бот компании Центрус.\nДля просмотра каталога нажмите на кнопку "Каталог".'
+    user, admin = Data.add_user(m.from_user, m.chat.id)
     main_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    if admin:
+        hello = f"Добро пожаловать администратор {user}!\nВыберите в каком режиме вы хотите войти."
+        main_keyboard.row('Панель_администратора')
+    else:
+        hello = f'{user}, добро пожаловать в чат-бот компании Центрус.\nДля просмотра каталога нажмите на кнопку "Каталог".'
     main_keyboard.row('Каталог')
+    bot.delete_message(chat_id=m.chat.id, message_id=m.message_id)
     bot.send_message(m.chat.id, hello, reply_markup=main_keyboard)
+
+@bot.message_handler(func=lambda message: message.text == "Панель_администратора")
+def panel_admin(m):
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton(text="Получить список пользователей", callback_data='users'))
+    user, admin = Data.add_user(m.from_user, m.chat.id)
+    bot.delete_message(chat_id=m.chat.id, message_id=m.message_id)
+    if admin:
+        bot.send_message(m.chat.id, text="Выберите команду", reply_markup=keyboard)
+    else:
+        bot.send_message(m.chat.id, text="У вас нет прав админа")
 
 @bot.message_handler(commands=['help',])
 def help(m):
@@ -31,6 +49,33 @@ def catalog(m):
     markup.add(InlineKeyboardButton(text="Клинкерные ступени", callback_data="next_peldano_0"))
     bot.delete_message(chat_id=m.chat.id, message_id=m.message_id)
     bot.send_message(m.chat.id, text="Выберите нужную категорию!", reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda m: m.data == 'users')
+def callback_users_list(m):
+    """Отправляет список клиентов в чат"""
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(InlineKeyboardButton(text="Сделать рассылку по клиентам", callback_data='spam'))
+    users_list = Data.get_all_users()
+    bot.delete_message(chat_id=m.message.chat.id, message_id=m.message.message_id)
+    bot.send_message(m.message.chat.id, text=users_list, reply_markup=keyboard)
+
+@bot.callback_query_handler(func=lambda m: m.data == "spam")
+def spam(m):
+    """обработчик рассылки по клиентам"""
+    text = "Введите Ваше сообщение. Если передумали, то введите 'Отмена'"
+    message = bot.send_message(m.message.chat.id, text=text)
+    bot.register_next_step_handler(message, spam_users)
+
+def spam_users(m):
+    """Рассылка по клиентам принятого сообщения"""
+    text = m.text
+    if text == "Отмена":
+        start(m)
+    else:
+        users = Data.get_users_for_send()
+        for user in users:
+            bot.send_message(user.chat, text=text)
+        bot.send_message(m.message.chat.id, text="Готово!")
 
 @bot.callback_query_handler(func=lambda m: m.data == "bruschatka")
 def callback_bruschatka(m):
@@ -68,6 +113,7 @@ def callback_beton_pagination(m):
         markup.add(button_back, button_middle)
     else:
         markup.add(button_back, button_middle, button_next)
+    markup.add(InlineKeyboardButton(text="Запросить звонок менеджера.", callback_data='callphone'))
     photo_lst = Data.get_list_photo(count, Data.category_list[table])
     photo_lst = Data.convert_to_output(photo_lst)
     bot.send_media_group(m.message.chat.id, photo_lst)
@@ -95,6 +141,7 @@ def callback_feldhaus_trot_pagination(m):
         markup.add(button_back, button_middle)
     else:
         markup.add(button_back, button_middle, button_next)
+    markup.add(InlineKeyboardButton(text="Запросить звонок менеджера.", callback_data='callphone'))
     photo_lst = Data.get_list_photo(count, Data.category_list[table])
     photo_lst = Data.convert_to_output(photo_lst)
     bot.send_media_group(m.message.chat.id, photo_lst)
@@ -123,6 +170,7 @@ def callback_fasade_kamen_paginator(m):
         markup.add(button_back, button_middle)
     else:
         markup.add(button_back, button_middle, button_next)
+    markup.add(InlineKeyboardButton(text="Запросить звонок менеджера.", callback_data='callphone'))
     photo_lst = Data.get_list_photo(count, Data.category_list[table])
     photo_lst = Data.convert_to_output(photo_lst)
     bot.send_media_group(m.message.chat.id, photo_lst)
@@ -149,6 +197,7 @@ def callback_fasade_kirpich_paginator(m):
         markup.add(button_back, button_middle)
     else:
         markup.add(button_back, button_middle, button_next)
+    markup.add(InlineKeyboardButton(text="Запросить звонок менеджера.", callback_data='callphone'))
     photo_lst = Data.get_list_photo(count, Data.category_list[table])
     photo_lst = Data.convert_to_output(photo_lst)
     bot.send_media_group(m.message.chat.id, photo_lst)
@@ -176,6 +225,7 @@ def callback_kirpich_paginator(m):
         markup.add(button_back, button_middle)
     else:
         markup.add(button_back, button_middle, button_next)
+    markup.add(InlineKeyboardButton(text="Запросить звонок менеджера.", callback_data='callphone'))
     photo_lst = Data.get_list_photo(count, Data.category_list[table])
     photo_lst = Data.convert_to_output(photo_lst)
     bot.send_media_group(m.message.chat.id, photo_lst)
@@ -203,6 +253,7 @@ def callback_peldano_paginator(m):
         markup.add(button_back, button_middle)
     else:
         markup.add(button_back, button_middle, button_next)
+    markup.add(InlineKeyboardButton(text="Запросить звонок менеджера.", callback_data='callphone'))
     photo_lst = Data.get_list_photo(count, Data.category_list[table])
     photo_lst = Data.convert_to_output(photo_lst)
     bot.send_media_group(m.message.chat.id, photo_lst)
@@ -229,6 +280,7 @@ def callback_fklinker_paginator(m):
         markup.add(button_back, button_middle)
     else:
         markup.add(button_back, button_middle, button_next)
+    markup.add(InlineKeyboardButton(text="Запросить звонок менеджера.", callback_data='callphone'))
     photo_lst = Data.get_list_photo(count, Data.category_list[table])
     photo_lst = Data.convert_to_output(photo_lst)
     bot.send_media_group(m.message.chat.id, photo_lst)
@@ -239,7 +291,26 @@ def callback_fklinker_paginator(m):
     bot.send_message(m.message.chat.id, text='Для просмотра названия формы и цвета нажмите на фото!',
                      reply_markup=markup)
 
+@bot.callback_query_handler(func=lambda m: m.data == 'callphone')
+def get_phone(m):
+    text = "Отправить телефон!"
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    keyboard.add(KeyboardButton(text=text, request_contact=True))
+    bot.send_message(m.message.chat.id, text="Нажмите на кнопку меню!", reply_markup=keyboard)
 
+@bot.message_handler(content_types=['contact',])
+def contact(m):
+    bot.delete_message(m.chat.id, m.id)
+    bot.send_message(m.chat.id, text="В ближайшее время с Вами свяжется менеджер.")
+    phone = m.contact.phone_number
+    user_id = m.from_user.id
+    Data.add_phone_number(user_id, phone)
+    admins = Data.get_admins()
+    user = User.get(User.user_id == user_id)
+    keyboard = ReplyKeyboardRemove()
+    for admin in admins:
+        bot.send_message(admin.chat, text=f"Запрос звонка от клиента: {user.first_name} {user.last_name}, Ник: {user.username},"
+                                          f" телефон: {user.telephone}", reply_markup=keyboard)
 
 
 bot.infinity_polling()

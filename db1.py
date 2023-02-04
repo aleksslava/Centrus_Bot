@@ -1,11 +1,9 @@
 import os
-
-from peewee import *
-from settings import Paths
-from models import Products
+from models import Products, User
 from models import Category
 from telebot.types import InputMediaPhoto
-
+from peewee import IntegrityError
+import json
 
 class Data:
 
@@ -78,11 +76,51 @@ class Data:
         lst = Products.select().join(Category).where(Category.name == table).offset(count).limit(5)
         return lst
 
+    @staticmethod
+    def add_user(user, chat):
+        first_name = user.first_name
+        last_name = user.last_name
+        id = user.id
+        admin = False
+        username = user.username
+        try:
+            user = User(first_name=first_name, last_name=last_name, user_id=id, admin=admin, chat=chat, username=username)
+            user.save()
+        except IntegrityError:
+            pass
+        output = User.select().where(User.user_id == id)
+        return output[0].first_name, output[0].admin
+    @staticmethod
+    def get_all_users():
+        lst = User.select()
+        output = ''
+        for user in lst:
+            user = dict(
+                first_name=user.first_name,
+                last_name=user.last_name,
+                username=user.username,
+                phone=user.telephone
+            )
+            user = json.dumps(user, ensure_ascii=False)
+            output += user + '\n'
+        return output
+    @staticmethod
+    def get_users_for_send():
+        return User.select()
 
+    @staticmethod
+    def add_phone_number(user_id, phone_number):
+        user = User.get(User.user_id == user_id)
+        user.telephone = phone_number
+        user.save()
+
+    @staticmethod
+    def get_admins():
+        admins = User.select().where(User.admin == True)
+        return admins
 
 if __name__ == "__main__":
-    lst = Data.get_list_photo(1, Data.category_list['beton'])
-    files = Data.convert_to_output(lst)
-    for file in files:
-        print(file.media)
+    print(Data.get_all_users())
+
+
 

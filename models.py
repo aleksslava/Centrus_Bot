@@ -28,6 +28,18 @@ class Products(BaseModel):
     class Meta:
         db_table = 'products'
 
+class User(BaseModel):
+    id = PrimaryKeyField(null=False)
+    first_name = CharField(max_length=100, null=True)
+    last_name = CharField(max_length=100, null=True)
+    username = CharField(max_length=100, null=True)
+    telephone = IntegerField(null=True)
+    admin = BooleanField()
+    user_id = IntegerField(unique=True)
+    chat = IntegerField(unique=True)
+
+    class Meta:
+        db_table = 'users'
 
 
 if __name__ == "__main__":
